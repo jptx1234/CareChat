@@ -31,7 +31,7 @@ import javax.swing.event.CaretListener;
 
 public class config extends JDialog {
 
-	private static final long serialVersionUID = 4367525227211353992L;
+	private static final long serialVersionUID = 1L;
 	public static config thiswindow;
 	private static boolean nic_is_same=chat.nic_is_same;
 	private JButton yes=new JButton("确定");
@@ -147,6 +147,8 @@ public class config extends JDialog {
 		inter_nic_tips.setFont(uifont);
 		JTextField inter_nicJTextField=new JTextField();
 		inter_nicJTextField.setFont(uifont);
+		inter_nicJTextField.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.BLACK));
+		inter_nicJTextField.setBackground(null);
 		JCheckBox same_to_lan=new JCheckBox("同步到局域网聊天昵称");
 		same_to_lan.setFont(uifont);
 		same_to_lan.setSelected(nic_is_same);
@@ -197,11 +199,11 @@ public class config extends JDialog {
 		
 //		确认&取消按钮结束
 		
+		setVisible(false);
 		add(common);
 		add(localJPanel);
 		add(internet);
 		add(saveconfigJPanel);
-		setVisible(false);
 		pack();
 		int wangka_width=0;
 		if ((wangka_width=(int) (wangkalist.getBounds().getWidth() + wangka_tip.getBounds().getWidth())) > 400) {
@@ -244,8 +246,7 @@ public class config extends JDialog {
 				same_to_inter.setSelected(is_selected);
 				if (is_selected) {
 					localnameblock=true;
-					nicnametx.setText(nicnametx.getText());
-					System.out.println("已设置");
+					nicnametx.setText(inter_nicJTextField.getText());
 					localnameblock=false;
 				}
 				
@@ -260,6 +261,18 @@ public class config extends JDialog {
 					nicnametx.setText(inter_nicJTextField.getText());
 					localnameblock=false;
 				}
+			}
+		});
+		inter_nicJTextField.addFocusListener(new FocusListener() {
+			
+			@Override
+			public void focusLost(FocusEvent e) {
+				inter_nicJTextField.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.BLACK));
+			}
+			
+			@Override
+			public void focusGained(FocusEvent e) {
+				inter_nicJTextField.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, Color.CYAN));
 			}
 		});
 		
@@ -279,7 +292,12 @@ public class config extends JDialog {
 				}else {
 					nic_mes.setVisible(false);
 					nicnametx.setBackground(null);
-					nicnametx.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, Color.CYAN));
+					if (nicnametx.isFocusOwner()) {
+						nicnametx.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, Color.CYAN));
+					}else {
+						nicnametx.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.BLACK));
+						
+					}
 				}
 			}
 		});
