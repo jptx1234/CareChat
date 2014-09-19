@@ -1,5 +1,6 @@
 package Chat;
 
+import java.awt.TrayIcon;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
@@ -34,6 +35,9 @@ public class AnnounceOLThread extends Thread {
 				Thread.sleep(10000);
 			} catch (IOException | InterruptedException e) {
 				// TODO Auto-generated catch block
+				if (chat.trayIcon != null) {
+					chat.trayIcon.displayMessage("上线信息宣告线程创建失败", "上线信息宣告线程创建失败，其他好友可能无法接收到您的上线信息。", TrayIcon.MessageType.ERROR);
+				}
 				chat.zhuangtailan.setText("宣告上线消息失败！");
 				chat.catchexception(e);
 			}

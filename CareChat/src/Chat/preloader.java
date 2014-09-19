@@ -2,6 +2,7 @@ package Chat;
 
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JWindow;
 
 public class preloader {
@@ -20,7 +21,8 @@ public class preloader {
 			load.add(im);
 		} catch (Exception e) {
 			// TODO: handle exception
-			e.printStackTrace();
+			JOptionPane.showMessageDialog(null, "资源文件被破坏，请重新下载或拷贝本程序！","找不到资源 - CareChat",JOptionPane.ERROR_MESSAGE);
+			return;
 		}
 		load.setVisible(true);
 		chat.mainly(load);

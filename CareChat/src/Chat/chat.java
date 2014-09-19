@@ -16,8 +16,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.BufferedReader;
@@ -39,6 +37,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.UUID;
 import java.util.Vector;
 
 import javax.swing.ImageIcon;
@@ -90,6 +89,10 @@ public class chat {
 	public	static int nets_use_item=0;
 	public	static String read_netinterface="";
 	public	static boolean nic_is_same=false;
+	public static TrayIcon trayIcon=null;
+	public static PopupMenu tray_popupMenu;
+	public static String uuid=UUID.randomUUID().toString().replaceAll("-", "");
+//	TODO 全局结束
 	
 
 	
@@ -98,13 +101,12 @@ public class chat {
 		w.setLocation(LocalX, LocalY);
 		
 		
-//		设置总样式、布局
+//		TODO 设置总样式、布局
 		w.setLayout(new BorderLayout());
 		
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 		} catch (Exception e2) {
-			// TODO Auto-generated catch block
 			catchexception(e2);
 		} 
 		//总样式、布局  结束
@@ -121,7 +123,6 @@ public class chat {
 		try {
 			username=InetAddress.getLocalHost().getHostName();
 		} catch (UnknownHostException e1) {
-			// TODO Auto-generated catch block
 			catchexception(e1);
 		}
 		final JTextField nicnametx=new JTextField(username,15);
@@ -149,7 +150,7 @@ public class chat {
 					return;
 					
 				}
-				w.setTitle(username+" - 本机IP："+localIP+" - CareChat");
+				updatetitile();
 				nets_use_item=wangkalist.getSelectedIndex();
 				lstnsysmes.start();
 			}
@@ -207,7 +208,7 @@ public class chat {
 		w.add(frlist,"East");
 		
 		
-		w.setTitle(username + " - 本机IP：" + localIP +" - CareChat");
+		updatetitile();
 		load.setVisible(false);
 		w.setVisible(true);
 		load.dispose();
@@ -253,7 +254,7 @@ public class chat {
 			
 			@Override
 			public void windowClosing(WindowEvent e) {
-				// TODO Auto-generated method stub
+				// TODO 窗口关闭
 				saveconfig();
 				zhuangtailan.setText("当前系统设置已保存");
 				if (AskOnClose) {
@@ -306,7 +307,6 @@ public class chat {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub
 				changename(nicnametx.getText());
 			}
 		});
@@ -320,7 +320,6 @@ public class chat {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub                
 				send(mesbox.getText().getBytes());                
 			}                                                     
 		});  
@@ -351,7 +350,6 @@ public class chat {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub
 				InternetChat.show();
 //				JOptionPane.showMessageDialog(null,"这部分还没写完");
 			}
@@ -388,7 +386,6 @@ public class chat {
 			bw.write(message);
 			bw.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			catchexception(e);
 			JOptionPane.showMessageDialog(null,"写入聊天历史记录文件失败，请检查程序对文件"+historyFile+"是否具有写入权限");
 			zhuangtailan.setText("写入聊天历史记录文件失败，请检查程序对文件"+historyFile+"是否具有写入权限");
@@ -411,15 +408,15 @@ public class chat {
 			DatagramSocket sender=new DatagramSocket();
 			sender.send(pack);
 			sender.close();
-			w.setTitle(name+" - "+localIP +" - CareChat");
+			updatetitile();
 			username=name;
 		} catch ( IOException e) {
-			// TODO Auto-generated catch block
 			catchexception(e);
 		}
 
 	}
 	
+//	TODO 获取网卡列表
 	public static Vector<String> getNetwork(){
 		Vector<String> networks=new Vector<>();
 		Enumeration<NetworkInterface> en;
@@ -433,7 +430,6 @@ public class chat {
 				networks.add(ni.getDisplayName()+" | "+ni.getName());
 			}
 		} catch (SocketException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 		
@@ -455,38 +451,40 @@ public class chat {
 				return true;
 			}
 		} catch (SocketException | UnknownHostException e) {
-			// TODO Auto-generated catch block
 			catchexception(e);
 		}
 		return false;
 	}
 	
+	public static void updatetitile(){
+		w.setTitle(username+" - 本机IP："+localIP+" - CareChat");
+	}
 	
 	public static void showTray(){
+//		TODO 显示托盘图标
 		SystemTray tray = SystemTray.getSystemTray();
 		Image image=null;
 		try {
 			image=(new ImageIcon(chat.class.getResource("/images/mao_XL.png"))).getImage();
-			
 		} catch (Exception e) {
-			// TODO: handle exception
+			JOptionPane.showMessageDialog(null, "资源文件被破坏，请重新下载或拷贝本程序！");
 		}
-		PopupMenu popupMenu = new PopupMenu();
+		tray_popupMenu = new PopupMenu();
 		MenuItem show = new MenuItem("显示界面");
+		show.setFont(uifont);
 		MenuItem change = new MenuItem("公网聊天");
 		MenuItem setting = new MenuItem("系统设置");
 		MenuItem exit = new MenuItem("退出程序");
-		popupMenu.add(show);
-		popupMenu.add(change);
-		popupMenu.add(setting);
-		popupMenu.add(exit);
-		popupMenu.setFont(uifont);
+		tray_popupMenu.add(show);
+		tray_popupMenu.add(change);
+		tray_popupMenu.add(setting);
+		tray_popupMenu.add(exit);
+		tray_popupMenu.setFont(uifont);
 		
 		show.addActionListener(new ActionListener() {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub
 				if (!w.isActive()) {
 					w.setVisible(true);
 				}
@@ -496,7 +494,6 @@ public class chat {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub
 				JOptionPane.showMessageDialog(null, "还没写完");
 			}
 		});
@@ -504,7 +501,6 @@ public class chat {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub
 				config.showon();
 			}
 		});
@@ -512,7 +508,6 @@ public class chat {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub
 				saveconfig();
 				zhuangtailan.setText("当前系统设置已保存");
 				if (AskOnClose) {
@@ -534,40 +529,24 @@ public class chat {
 			}
 		});
 		
-		TrayIcon trayIcon=new TrayIcon(image, w.getTitle(), popupMenu);
-		trayIcon.addMouseListener(new MouseListener() {
+		trayIcon=new TrayIcon(image, w.getTitle(), tray_popupMenu);
+		trayIcon.addActionListener(new ActionListener() {
 			
 			@Override
-			public void mouseReleased(MouseEvent e) {}
-			
-			@Override
-			public void mousePressed(MouseEvent e) {}
-			
-			@Override
-			public void mouseExited(MouseEvent e) {}
-			
-			@Override
-			public void mouseEntered(MouseEvent e) {}
-			
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				// TODO Auto-generated method stub
-				if (!w.isActive()) {
-					w.setVisible(true);
-				}
+			public void actionPerformed(ActionEvent e) {
+				w.setVisible(true);
 			}
 		});
 		trayIcon.setImageAutoSize(true);
 		try {
 			tray.add(trayIcon);
 		} catch (AWTException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 //		trayIcon.displayMessage("醒目！！！标题长长长长长长长长……", "\r\n\r\n\r\n                                 在此处右键有更多内容\r\n\r\n\r\n", TrayIcon.MessageType.INFO);
 	}
 	
-	
+//	TODO 退出
 	public static void exit(){
 		try {
 			byte[] offlnmesString=("offl=").getBytes();
@@ -579,7 +558,6 @@ public class chat {
 			sender.send(pack);
 			sender.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			catchexception(e);
 		}
 	}
@@ -606,7 +584,6 @@ public class chat {
 			bw.close();
 			zhuangtailan.setText("配置文件保存完毕");
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			catchexception(e);
 		}
 		
@@ -666,10 +643,8 @@ public class chat {
 			br.close();
 			
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
 			return;
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			zhuangtailan.setText("无法读取配置文件");
 			catchexception(e);
 		}
@@ -677,6 +652,7 @@ public class chat {
 	
 	
 	
+	// TODO 抓取异常，创建日志
 	public static void catchexception(Exception e){
 		e.printStackTrace();
 		File errlog=new File("错误日志.log");
@@ -684,7 +660,9 @@ public class chat {
 			try {
 				errlog.createNewFile();
 			} catch (IOException e1) {
-				// TODO Auto-generated catch block
+				if (chat.trayIcon != null) {
+					chat.trayIcon.displayMessage("创建错误日志出现错误", "创建错误日志出现错误，请检查程序对当前目录是否有写入权限", TrayIcon.MessageType.ERROR);
+				}
 				zhuangtailan.setText("错误日志创建失败！");
 			}
 		}
@@ -695,7 +673,9 @@ public class chat {
 			bw.write(new SimpleDateFormat("yyyy年MM月dd日  HH:mm:ss\r\n").format(new Date())+b.toString()+"\r\n");
 			bw.close();
 		} catch (IOException e1) {
-			// TODO Auto-generated catch block
+			if (trayIcon != null) {
+				trayIcon.displayMessage("写入错误日志出现错误", "写入错误日志出现错误，请检查“错误日志.log”文件是否允许写入", TrayIcon.MessageType.ERROR);
+			}
 			zhuangtailan.setText("错误日志写入失败！");
 		}
 		
@@ -721,12 +701,12 @@ public class chat {
 		}
 		
 		formload(load);
-		lstnsysmes.start();
-		new Thread(new receiveThread()).start();
-		new Thread(new AnnounceOLThread()).start();
 		if (SystemTray.isSupported()) {
 			showTray();
 		}
+		lstnsysmes.start();
+		new Thread(new receiveThread()).start();
+		new Thread(new AnnounceOLThread()).start();
 	}
 
 }

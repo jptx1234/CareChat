@@ -6,6 +6,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.SocketException;
+import java.awt.TrayIcon;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 
@@ -18,7 +19,10 @@ public class ListenSysMes extends Thread {
 			this.broadSocket=new MulticastSocket(chat.muticastport);
 			this.broadSocket.joinGroup(InetAddress.getByName(chat.muticast));
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			// TODO 构建
+			if (chat.trayIcon != null) {
+				chat.trayIcon.displayMessage("CareChat初始化错误", "广播信息接收线程创建失败，您可能无法获取好友列表。请将程序目录下的“错误日志.log”文件发给作者", TrayIcon.MessageType.ERROR);
+			}
 			chat.catchexception(e);
 			run=false;
 		}
@@ -88,7 +92,9 @@ public class ListenSysMes extends Thread {
 				broadSocket.close();
 				break;
 			}catch (IOException  e) {
-				// TODO Auto-generated catch block
+				if (chat.trayIcon != null) {
+					chat.trayIcon.displayMessage("线程出错", "广播信息接收线程出现错误，请将程序目录下的“错误日志.log”文件发给作者", TrayIcon.MessageType.ERROR);
+				}
 				chat.catchexception(e);
 			}
 			
@@ -124,6 +130,9 @@ public class ListenSysMes extends Thread {
 			sender.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
+			if (chat.trayIcon != null) {
+				chat.trayIcon.displayMessage("应答信息发送失败", "网络应答信息发送出现错误，请将程序目录下的“错误日志.log”文件发给作者", TrayIcon.MessageType.ERROR);
+			}
 			chat.catchexception(e);
 		}
 	}

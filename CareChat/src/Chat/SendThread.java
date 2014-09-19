@@ -1,5 +1,6 @@
 package Chat;
 
+import java.awt.TrayIcon;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -44,6 +45,9 @@ public class SendThread extends Thread {
 			ds.close();
 		} catch (Exception e) {
 			// TODO: handle exception
+			if (chat.trayIcon != null) {
+				chat.trayIcon.displayMessage(null, "向好友发送消息失败", TrayIcon.MessageType.ERROR);
+			}
 			chat.zhuangtailan.setText("向"+ip.getHostAddress()+"---"+chat.frdlist.get(ip)+"发送失败");
 			chat.catchexception(e);
 		}

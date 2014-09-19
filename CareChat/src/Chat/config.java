@@ -426,11 +426,15 @@ public class config extends JDialog {
 		chat.changename(new_local_name);
 		chat.serverip=new_serverip;
 		chat.serverport=new_serverport;
+		if (chat.trayIcon != null) {
+			chat.trayIcon.setToolTip(chat.w.getTitle());
+		}
 		thiswindow.dispose();
 		thiswindow=null;
 	}
 	
 	public static void showon(){
+//		TODO ÏÔÊ¾´°¿Ú
 		if (thiswindow != null) {
 			thiswindow.setVisible(false);
 			thiswindow.setLocationRelativeTo(chat.w);
