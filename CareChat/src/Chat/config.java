@@ -22,6 +22,7 @@ import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.border.LineBorder;
@@ -33,12 +34,24 @@ public class config extends JDialog {
 
 	private static final long serialVersionUID = 1L;
 	public static config thiswindow;
-	private static boolean nic_is_same=chat.nic_is_same;
+	private boolean nic_is_same=chat.nic_is_same;
 	private JButton yes=new JButton("确定");
+	private boolean nic_lan_ok=true;
+	private boolean netcard_ok=true;
+	private boolean server_ok=true;
 	private volatile boolean internameblock=false;
 	private volatile boolean localnameblock=false;
+	private boolean new_ask_on_close=chat.AskOnClose;
+	private String new_local_name=chat.username;
+	private int new_netcard_id=chat.nets_use_item;
+	private String new_netcard_name=chat.nets.get(new_netcard_id).toString().split("\\| ")[1];
+	private String new_inter_name=InternetChat.username;
+	private String new_serverip=chat.serverip;
+	private int new_serverport=chat.serverport;
 
-	public config(){
+	private config(){
+		System.out.println(new_netcard_id);
+		System.out.println(new_netcard_name);
 		setSize(40, 40);
 		setLocationRelativeTo(chat.w);
 		setVisible(true);
@@ -112,7 +125,7 @@ public class config extends JDialog {
 		JPanel netcard_mes_JPanel=new JPanel(new FlowLayout(FlowLayout.LEFT,5,-2));
 		JLabel net_mes_blank=new JLabel("          ");
 		JLabel netcard_mes=new JLabel();
-		netcard_mes.setText(getip(wangkalist.getSelectedItem().toString().split("\\| ")[1], netcard_mes));
+		netcard_mes.setText(getip(wangkalist.getSelectedItem().toString().toString().split("\\| ")[1], netcard_mes));
 		netcard_mes.setBackground(Color.ORANGE);
 		netcard_mes.setFont(uifont);
 		netcard_mes_JPanel.add(net_mes_blank);
@@ -122,8 +135,9 @@ public class config extends JDialog {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				netcard_mes.setText(getip(wangkalist.getSelectedItem().toString().split("\\| ")[1], netcard_mes));
-				
+				new_netcard_id=wangkalist.getSelectedIndex();
+				new_netcard_name=wangkalist.getSelectedItem().toString().toString().split("\\| ")[1];
+				netcard_mes.setText(getip(new_netcard_name, netcard_mes));
 			}
 		});
 //		网卡设置结束
@@ -191,11 +205,11 @@ public class config extends JDialog {
 		
 //		确认&取消按钮开始
 		JPanel saveconfigJPanel=new JPanel(new FlowLayout(FlowLayout.CENTER, 100, 10));
-		JButton ignore=new JButton("取消");
+		JButton cancel=new JButton("取消");
 		yes.setFont(uifont);
-		ignore.setFont(uifont);
+		cancel.setFont(uifont);
 		saveconfigJPanel.add(yes);
-		saveconfigJPanel.add(ignore);
+		saveconfigJPanel.add(cancel);
 		
 //		确认&取消按钮结束
 		
@@ -223,14 +237,21 @@ public class config extends JDialog {
 		setLocationRelativeTo(chat.w);
 		setVisible(true);
 		
+		ask_on_close_CheckBox.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				new_ask_on_close=ask_on_close_CheckBox.isSelected();
+			}
+		});
+		
 		same_to_inter.addActionListener(new ActionListener() {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				boolean is_selected=same_to_inter.isSelected();
-				nic_is_same=is_selected;
-				same_to_lan.setSelected(is_selected);
-				if (is_selected) {
+				nic_is_same=same_to_inter.isSelected();
+				same_to_lan.setSelected(nic_is_same);
+				if (nic_is_same) {
 					internameblock=true;
 					inter_nicJTextField.setText(nicnametx.getText());
 					internameblock=false;
@@ -241,10 +262,9 @@ public class config extends JDialog {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				boolean is_selected=same_to_lan.isSelected();
-				nic_is_same=is_selected;
-				same_to_inter.setSelected(is_selected);
-				if (is_selected) {
+				nic_is_same=same_to_lan.isSelected();
+				same_to_inter.setSelected(nic_is_same);
+				if (nic_is_same) {
 					localnameblock=true;
 					nicnametx.setText(inter_nicJTextField.getText());
 					localnameblock=false;
@@ -256,9 +276,10 @@ public class config extends JDialog {
 			
 			@Override
 			public void caretUpdate(CaretEvent e) {
+				new_inter_name=inter_nicJTextField.getText();
 				if (nic_is_same & !internameblock) {
 					localnameblock=true;
-					nicnametx.setText(inter_nicJTextField.getText());
+					nicnametx.setText(new_inter_name);
 					localnameblock=false;
 				}
 			}
@@ -280,15 +301,18 @@ public class config extends JDialog {
 			
 			@Override
 			public void caretUpdate(CaretEvent e) {
+				new_local_name=nicnametx.getText();
 				if (nic_is_same & !localnameblock) {
 					internameblock=true;
-					inter_nicJTextField.setText(nicnametx.getText());
+					inter_nicJTextField.setText(new_local_name);
 					internameblock=false;
 				}
-				if (nicnametx.getText().getBytes().length > 30) {
+				if (new_local_name.getBytes().length > 30) {
 					nic_mes.setVisible(true);
 					nicnametx.setBackground(Color.ORANGE);
 					nicnametx.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, Color.RED));
+					nic_lan_ok=false;
+					UpdateYesButton();
 				}else {
 					nic_mes.setVisible(false);
 					nicnametx.setBackground(null);
@@ -296,8 +320,9 @@ public class config extends JDialog {
 						nicnametx.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, Color.CYAN));
 					}else {
 						nicnametx.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.BLACK));
-						
 					}
+					nic_lan_ok=true;
+					UpdateYesButton();
 				}
 			}
 		});
@@ -311,6 +336,24 @@ public class config extends JDialog {
 			@Override
 			public void focusGained(FocusEvent e) {
 				nicnametx.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, Color.CYAN));
+			}
+		});
+		
+		yes.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				yes.setEnabled(false);
+				savesonfig();
+			}
+		});
+		
+		cancel.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				thiswindow.dispose();
+				thiswindow=null;
 			}
 		});
 		
@@ -330,8 +373,8 @@ public class config extends JDialog {
 			
 			@Override
 			public void windowClosing(WindowEvent e) {
+				thiswindow.dispose();
 				thiswindow=null;
-				setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 			}
 			
 			@Override
@@ -340,25 +383,52 @@ public class config extends JDialog {
 			@Override
 			public void windowActivated(WindowEvent e) {}
 		});
+		
 	}
 	
-	public String getip(String netcard,JLabel show){
+	private String getip(String netcard,JLabel show){
 		NetworkInterface nowiInterface;
 		String nowip;
 		try {
 			if ((nowiInterface=(NetworkInterface.getByName(netcard)))!=null && nowiInterface.isUp()&& nowiInterface.getInterfaceAddresses().size() != 0 && !(nowip=nowiInterface.getInterfaceAddresses().get(0).toString().split("/")[1]).startsWith("169") && !nowip.contains(":")) {
-				chat.localIP=nowip;
 				show.setOpaque(false);
+				netcard_ok=true;
+				UpdateYesButton();
 				return "该网卡IP  "+nowip;
 			}
 		} catch (SocketException e) {
 			chat.catchexception(e);
 		}
 		show.setOpaque(true);
+		netcard_ok=false;
+		UpdateYesButton();
 		return "当前网卡无有效的IP配置";
 	}
 	
+	private void UpdateYesButton(){
+		if (nic_lan_ok & netcard_ok & server_ok) {
+			yes.setEnabled(true);
+		}else {
+			yes.setEnabled(false);
+		}
+	}
 	
+	private void savesonfig() {
+//		TODO 保存配置
+		if (chat.checkip(new_netcard_name)) {
+			chat.nets_use_item=new_netcard_id;
+			chat.lstnsysmes.start();
+		}else {
+			JOptionPane.showMessageDialog(thiswindow, "设置保存失败，您选择的网卡"+chat.nets.get(new_netcard_id)+"没有有效的IP配置");
+			return;
+		}
+		chat.AskOnClose=new_ask_on_close;
+		chat.changename(new_local_name);
+		chat.serverip=new_serverip;
+		chat.serverport=new_serverport;
+		thiswindow.dispose();
+		thiswindow=null;
+	}
 	
 	public static void showon(){
 		if (thiswindow != null) {

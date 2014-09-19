@@ -2,7 +2,6 @@ package Chat;
 
 import java.awt.AWTException;
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Image;
@@ -15,8 +14,6 @@ import java.awt.Toolkit;
 import java.awt.TrayIcon;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
@@ -57,42 +54,42 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JWindow;
 import javax.swing.UIManager;
-import javax.swing.border.LineBorder;
 
 public class chat {
 
 	/**
 	 * @param args
 	 */
-	static JFrame w=new JFrame();
-	static JTextArea mesbox=new JTextArea(2,2);
-	static JTextArea his=new JTextArea();
-	static String username="新用户";
-	static List friendlsit=new List(10, true);  
-	static JLabel zhuangtailan=new JLabel(" ");
-	static HashMap<InetAddress, String> frdlist=new HashMap<>();
-	static HashMap<InetAddress, Long> frdol=new HashMap<>();
-	static int LocalX=Toolkit.getDefaultToolkit().getScreenSize().width/2-225;
-	static int LocalY=Toolkit.getDefaultToolkit().getScreenSize().height/2-250;
-	static int Width=450;
-	static int Height=500;
-	static File historyFile=new File("局域网聊天记录.txt");
-	static File internetHistory=new File("互联聊天记录.txt");
-	static 	File frdFile=new File("好友列表.lst");
-	static boolean AskOnClose=true;
-	static String serverip="8.8.8.8";
-	static int serverport=7000;
-	static JButton changetointernet=new JButton("公网聊天");
-	static final Font uifont=new Font("微软雅黑",Font.PLAIN,13);
-	static String muticast="235.0.0.1";
-	static int muticastport=40100;
-	static String localIP="";
-	static byte[] localIPbytes=new byte[4];
-	static ListenSysMes lstnsysmes=new ListenSysMes();
-	static Vector<String> nets=getNetwork();
-	static int nets_use_item=0;
-	static String read_netinterface="";
-	static boolean nic_is_same=false;
+//	TODO 声明全局
+	public	static JFrame w=new JFrame();
+	public	static JTextArea mesbox=new JTextArea(2,2);
+	public	static JTextArea his=new JTextArea();
+	public	static String username="新用户";
+	public	static List friendlsit=new List(10, true);  
+	public	static JLabel zhuangtailan=new JLabel(" ");
+	public	static HashMap<InetAddress, String> frdlist=new HashMap<>();
+	public	static HashMap<InetAddress, Long> frdol=new HashMap<>();
+	public	static int LocalX=Toolkit.getDefaultToolkit().getScreenSize().width/2-225;
+	public	static int LocalY=Toolkit.getDefaultToolkit().getScreenSize().height/2-250;
+	public	static int Width=450;
+	public	static int Height=500;
+	public	static File historyFile=new File("局域网聊天记录.txt");
+	public	static File internetHistory=new File("互联聊天记录.txt");
+	public	static 	File frdFile=new File("好友列表.lst");
+	public	static boolean AskOnClose=true;
+	public	static String serverip="8.8.8.8";
+	public	static int serverport=7000;
+	public	static JButton changetointernet=new JButton("公网聊天");
+	public	static final Font uifont=new Font("微软雅黑",Font.PLAIN,13);
+	public	static String muticast="235.0.0.1";
+	public	static int muticastport=40100;
+	public	static String localIP="";
+	public	static byte[] localIPbytes=new byte[4];
+	public	static ListenSysMes lstnsysmes=new ListenSysMes();
+	public	static Vector<String> nets=getNetwork();
+	public	static int nets_use_item=0;
+	public	static String read_netinterface="";
+	public	static boolean nic_is_same=false;
 	
 
 	
@@ -143,7 +140,7 @@ public class chat {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub
+				// TODO 切换网卡
 				
 				lstnsysmes=new ListenSysMes();
 				if (!checkip(wangkalist.getSelectedItem().toString().split("\\| ")[1])) {
@@ -400,14 +397,13 @@ public class chat {
 	}
 	
 	public static void changename(String name){
-		if (name.getBytes().length > 25) {
-			JOptionPane.showMessageDialog(null, "昵称不能超过25个字符（12个汉字）");
-			zhuangtailan.setText("昵称不能超过25个字符（12个汉字）");
+		if (name.getBytes().length > 30) {
+			JOptionPane.showMessageDialog(null, "昵称不能超过30个字符（15个汉字）");
+			zhuangtailan.setText("昵称不能超过30个字符（15个汉字）");
 			return;
 		}
 		try {
-			
-			byte[] renmmesString=("renm="+chat.username).getBytes();
+			byte[] renmmesString=("renm="+name).getBytes();
 			byte[] renmmes=new byte[renmmesString.length+4];
 			System.arraycopy(localIPbytes, 0, renmmes, 0, 4);
 			System.arraycopy(renmmesString, 0, renmmes, 4, renmmesString.length);
@@ -415,8 +411,8 @@ public class chat {
 			DatagramSocket sender=new DatagramSocket();
 			sender.send(pack);
 			sender.close();
-			username=name;
 			w.setTitle(name+" - "+localIP +" - CareChat");
+			username=name;
 		} catch ( IOException e) {
 			// TODO Auto-generated catch block
 			catchexception(e);

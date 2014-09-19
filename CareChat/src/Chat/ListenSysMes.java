@@ -44,7 +44,7 @@ public class ListenSysMes extends Thread {
 			chat.catchexception(e1);
 		}
 		while (true) {
-			received=new DatagramPacket(new byte[35], 35);
+			received=new DatagramPacket(new byte[39], 39);
 			try {
 				broadSocket.receive(received);
 				hisip=InetAddress.getByAddress(Arrays.copyOfRange(received.getData(), 0, 4));
