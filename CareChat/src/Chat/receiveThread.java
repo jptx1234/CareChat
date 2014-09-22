@@ -4,7 +4,6 @@ import java.awt.TrayIcon;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
 
 public class receiveThread extends Thread {
 	@SuppressWarnings("resource")
@@ -25,9 +24,7 @@ public class receiveThread extends Thread {
 			try {
 				DatagramPacket dp=new DatagramPacket(new byte[1024], 1024);
 				ds.receive(dp);
-				String mes=new String(dp.getData(),0,dp.getLength());
-				InetAddress ip=dp.getAddress();
-				chat.showmes(mes, chat.frdlist.get(ip));
+				chat.showmes(new String(dp.getData(), 0, dp.getLength()),chat.frdname.get(dp.getAddress()));
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				if (chat.trayIcon != null) {

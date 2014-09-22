@@ -5,17 +5,20 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Image;
-import java.awt.Label;
 import java.awt.List;
 import java.awt.MenuItem;
 import java.awt.PopupMenu;
 import java.awt.SystemTray;
 import java.awt.Toolkit;
 import java.awt.TrayIcon;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.BufferedReader;
@@ -37,20 +40,20 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.UUID;
+import java.util.Random;
 import java.util.Vector;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
-import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
-import javax.swing.JTextField;
 import javax.swing.JWindow;
 import javax.swing.UIManager;
 
@@ -66,8 +69,8 @@ public class chat {
 	public	static String username="新用户";
 	public	static List friendlsit=new List(10, true);  
 	public	static JLabel zhuangtailan=new JLabel(" ");
-	public	static HashMap<InetAddress, String> frdlist=new HashMap<>();
-	public	static HashMap<InetAddress, Long> frdol=new HashMap<>();
+	public	static HashMap<byte[], InetAddress> frdlist=new HashMap<>();
+	public	static HashMap<InetAddress, String> frdname=new HashMap<>();
 	public	static int LocalX=Toolkit.getDefaultToolkit().getScreenSize().width/2-225;
 	public	static int LocalY=Toolkit.getDefaultToolkit().getScreenSize().height/2-250;
 	public	static int Width=450;
@@ -91,7 +94,7 @@ public class chat {
 	public	static boolean nic_is_same=false;
 	public static TrayIcon trayIcon=null;
 	public static PopupMenu tray_popupMenu;
-	public static String uuid=UUID.randomUUID().toString().replaceAll("-", "");
+	public static byte[] uid= getuid();
 //	TODO 全局结束
 	
 
@@ -111,52 +114,8 @@ public class chat {
 		} 
 		//总样式、布局  结束
 		
-		JPanel info=new JPanel();
-		JPanel wangka=new JPanel();
-		JPanel info_lan=new JPanel(new BorderLayout());
 		JPanel send=new JPanel(new BorderLayout());
 		JPanel sendlan=new JPanel(new BorderLayout());
-		
-//		昵称设置部分开始
-		JLabel nictips=new JLabel("更改昵称 ", Label.RIGHT);
-		nictips.setFont(uifont);
-		try {
-			username=InetAddress.getLocalHost().getHostName();
-		} catch (UnknownHostException e1) {
-			catchexception(e1);
-		}
-		final JTextField nicnametx=new JTextField(username,15);
-		nicnametx.setFont(uifont);
-		
-		JButton nicyes=new JButton("确认更改");
-		nicyes.setFont(uifont);
-//		昵称设置部分结束
-		
-//		网卡设置开始
-		JLabel wangka_tip=new JLabel("网卡选择");
-		wangka_tip.setFont(uifont);
-		final JComboBox<String> wangkalist=new JComboBox<>(nets);
-		wangkalist.setSelectedIndex(nets_use_item);
-		wangkalist.addActionListener(new ActionListener() {
-			
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				// TODO 切换网卡
-				
-				lstnsysmes=new ListenSysMes();
-				if (!checkip(wangkalist.getSelectedItem().toString().split("\\| ")[1])) {
-					JOptionPane.showMessageDialog(null, "网卡"+wangkalist.getSelectedItem().toString()+" 未连接网络或IP配置不正确！");
-					wangkalist.setSelectedIndex(nets_use_item);
-					return;
-					
-				}
-				updatetitile();
-				nets_use_item=wangkalist.getSelectedIndex();
-				lstnsysmes.start();
-			}
-		});
-//		网卡设置结束
-		
 		
 //		发送消息部分按钮、消息框样式
 		JButton sendtext=new JButton("发送 (Enter)");
@@ -183,18 +142,10 @@ public class chat {
 		
 		zhuangtailan.setFont(uifont);
 		
-		info.add(nictips);
-		info.add(nicnametx);
-		info.add(nicyes);
-		
-		wangka.add(wangka_tip);
-		wangka.add(wangkalist);
 		
 		send.add(mesbox,"Center");
 		send.add(sendtext,"East");
 		
-		info_lan.add(info,"North");
-		info_lan.add(wangka,"South");
 		
 		sendlan.add(send,"North");
 		sendlan.add(zhuangtailan,"South");
@@ -202,7 +153,6 @@ public class chat {
 		frlist.add(frlist_tips,"North");
 		frlist.add(friendlsit,"Center");
 		
-		w.add(info_lan,"North");
 		w.add(his_area,"Center");
 		w.add(sendlan,"South");
 		w.add(frlist,"East");
@@ -234,6 +184,169 @@ public class chat {
 //		});
 		
 //		设置颜色结束
+		
+//		右键菜单开始
+		JPopupMenu menu_his=new JPopupMenu();
+		JMenuItem copyItem_his=new JMenuItem("复制");
+		JMenuItem hideItem_his=new JMenuItem("隐藏界面");
+		JMenuItem changetointernetItem_his=new JMenuItem("公网聊天");
+		JMenuItem configItem_his=new JMenuItem("系统设置");
+		
+		copyItem_his.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				his.copy();
+			}
+		});
+		hideItem_his.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				w.setVisible(false);
+			}
+		});
+		changetointernetItem_his.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JOptionPane.showMessageDialog(null, "没写完");
+			}
+		});
+		configItem_his.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				config.showon();
+			}
+		});
+		
+		menu_his.add(copyItem_his);
+		menu_his.add(hideItem_his);
+		menu_his.add(changetointernetItem_his);
+		menu_his.add(configItem_his);
+		
+		his.addMouseListener(new MouseListener() {
+			
+			@Override
+			public void mouseReleased(MouseEvent e) {}
+			
+			@Override
+			public void mousePressed(MouseEvent e) {
+				if (e.getButton() == 3) {
+					if (his.getSelectedText() == null) {
+						copyItem_his.setEnabled(false);
+					}else {
+						copyItem_his.setEnabled(true);
+					}
+					menu_his.show(his, e.getX(), e.getY());
+				}
+			}
+			
+			@Override
+			public void mouseExited(MouseEvent e) {}
+			
+			@Override
+			public void mouseEntered(MouseEvent e) {}
+			
+			@Override
+			public void mouseClicked(MouseEvent e) {}
+		});
+		
+		JPopupMenu menu_mes=new JPopupMenu();
+		JMenuItem copyItem_mes=new JMenuItem("复制");
+		JMenuItem cutItem_mes=new JMenuItem("剪切");
+		JMenuItem pasteItem_mes=new JMenuItem("粘贴");
+		JMenuItem hideItem_mes=new JMenuItem("隐藏界面");
+		JMenuItem changetointernetItem_mes=new JMenuItem("公网聊天");
+		JMenuItem configItem_mes=new JMenuItem("系统设置");
+		
+		copyItem_mes.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				mesbox.copy();
+			}
+		});
+		cutItem_mes.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				mesbox.cut();
+			}
+		});
+		pasteItem_mes.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				mesbox.paste();
+			}
+		});
+		hideItem_mes.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				w.setVisible(false);
+			}
+		});
+		changetointernetItem_mes.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JOptionPane.showMessageDialog(null, "还没写完");
+			}
+		});
+		configItem_mes.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				config.showon();
+			}
+		});
+		
+		menu_mes.add(copyItem_mes);
+		menu_mes.add(cutItem_mes);
+		menu_mes.add(pasteItem_mes);
+		menu_mes.add(hideItem_mes);
+		menu_mes.add(changetointernetItem_mes);
+		menu_mes.add(configItem_mes);
+		
+		mesbox.addMouseListener(new MouseListener() {
+			
+			@Override
+			public void mouseReleased(MouseEvent e) {}
+			
+			@Override
+			public void mousePressed(MouseEvent e) {
+				if (e.getButton() == 3) {
+					if (mesbox.getSelectedText() == null) {
+						copyItem_mes.setEnabled(false);
+						cutItem_mes.setEnabled(false);
+					}else {
+						copyItem_mes.setEnabled(true);
+						cutItem_mes.setEnabled(true);
+					}
+					Transferable contents=(Toolkit.getDefaultToolkit().getSystemClipboard()).getContents(mesbox);
+					if(contents==null || !contents.isDataFlavorSupported(DataFlavor.stringFlavor)){
+						pasteItem_mes.setEnabled(false);
+					}else {
+						pasteItem_mes.setEnabled(true);
+					}
+					menu_mes.show(mesbox, e.getX(), e.getY());
+				}
+			}
+			
+			@Override
+			public void mouseExited(MouseEvent e) {}
+			
+			@Override
+			public void mouseEntered(MouseEvent e) {}
+			
+			@Override
+			public void mouseClicked(MouseEvent e) {}
+		});
+//		右键菜单结束
+		
 		
 //		窗口事件开始
 		w.addWindowListener(new WindowListener() {
@@ -282,37 +395,6 @@ public class chat {
 			public void windowActivated(WindowEvent e) {}
 		});
 //		窗口事件结束
-		
-//		更改昵称框事件开始
-		nicnametx.addKeyListener(new KeyListener() {
-		
-		@Override
-		public void keyTyped(KeyEvent e) {}
-		
-		@Override
-		public void keyReleased(KeyEvent e) {}
-		
-		@Override
-		public void keyPressed(KeyEvent e) {
-			if (e.getKeyCode()==10) {
-				e.consume();
-				changename(nicnametx.getText());
-			}
-		}
-	});
-//		更改昵称框事件结束
-		
-//		更改昵称按钮事件开始
-		nicyes.addActionListener(new ActionListener() {
-			
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				changename(nicnametx.getText());
-			}
-		});
-//		更改昵称按钮事件结束
-		
-		
 		
 		
 //		发送消息按钮事件开始
@@ -435,6 +517,13 @@ public class chat {
 		
 	    return networks;
 	}
+	
+	public static byte[] getuid(){
+		byte[] uid=new byte[8];
+		(new Random()).nextBytes(uid);
+		return uid;
+	}
+	
 	
 	public static boolean  checkip(String interfacename) {
 		NetworkInterface nowiInterface;

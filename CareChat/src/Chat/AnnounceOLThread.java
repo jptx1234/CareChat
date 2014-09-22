@@ -12,6 +12,7 @@ public class AnnounceOLThread extends Thread {
 	public void run() {
 		// TODO Auto-generated method stub
 		InetAddress muticast = null;
+		byte[] uid=chat.uid;
 		try {
 			muticast = InetAddress.getByName(chat.muticast);
 		} catch (UnknownHostException e1) {
@@ -21,9 +22,10 @@ public class AnnounceOLThread extends Thread {
 		while (true) {
 			try {
 				byte[] findmesString=("find="+chat.username).getBytes();
-				byte[] findmes=new byte[findmesString.length+4];
-				System.arraycopy(chat.localIPbytes, 0, findmes, 0, 4);
-				System.arraycopy(findmesString, 0, findmes, 4, findmesString.length);
+				byte[] findmes=new byte[findmesString.length+12];
+				System.arraycopy(uid, 0, findmes, 0, 8);
+				System.arraycopy(chat.localIPbytes, 0, findmes, 8, 4);
+				System.arraycopy(findmesString, 0, findmes, 12, findmesString.length);
 				DatagramPacket pack=new DatagramPacket(findmes, findmes.length, muticast, chat.muticastport);
 				
 				
