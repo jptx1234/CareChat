@@ -13,6 +13,7 @@ public class ListenSysMes extends Thread {
 	public volatile MulticastSocket broadSocket;
 	private boolean run=true;
 	byte[] myuid=chat.uid;
+	String myuidString=chat.uidString;
 	
 	public ListenSysMes(){
 		try {
@@ -31,6 +32,7 @@ public class ListenSysMes extends Thread {
 	@Override
 	public void run() {
 		// TODO Auto-generated method stub
+		System.out.println("已开始");
 		if (!run) {
 			return;
 		}
@@ -40,9 +42,7 @@ public class ListenSysMes extends Thread {
 		InetAddress hisip;
 		String frdshow;
 		byte[] hisuid;
-		for (byte b : myuid) {
-			System.out.println(b);
-		}
+		String hisuidString;
 		try {
 			broadSocket.setSoTimeout(0);
 		} catch (SocketException e1) {
@@ -54,42 +54,59 @@ public class ListenSysMes extends Thread {
 			try {
 				broadSocket.receive(received);
 				hisuid=Arrays.copyOfRange(received.getData(), 0, 8);
+				StringBuilder sb=new StringBuilder();
+				for (byte b : hisuid) {
+					String b_temp=String.valueOf(b);
+					if (b_temp.contains("-")) {
+						b_temp=b_temp.replaceAll("-", "");
+						sb.append("-");
+					}
+					for (int i = 3-b_temp.length(); i > 0; i--) {
+						sb.append("0");
+					}
+					sb.append(b_temp);
+				}
+				hisuidString=sb.toString();
+				System.out.println("收到"+hisuidString);
 				hisip=InetAddress.getByAddress(Arrays.copyOfRange(received.getData(), 8, 12));
+				System.out.println(hisip);
 				mes=new String(received.getData(),12,received.getLength()-12);
 				System.out.println(mes);
-				if (Arrays.equals(hisuid, myuid)) {
+				if (hisuidString.equals(myuidString)) {
 					continue;
 				}
+				chat.frd_online_time.put(hisuidString, System.currentTimeMillis());
 				if (mes.startsWith("find=")) {
-					hisname=mes.replaceAll("find=", "");
-					if (chat.frdlist.containsKey(hisuid)) {
-						rename(hisuid,hisip, hisname);
+					hisname=mes.replaceAll("find=", ""); 
+					if (chat.frdlist.containsKey(hisuidString)) {
+						rename(hisuidString,hisip, hisname);
 						returnmes(hisip);
 					}else {
-						online(hisuid,hisip, hisname, "online");
+						online(hisuidString,hisip, hisname, "online");
 						returnmes(hisip);
 					}
 				}else if (mes.startsWith("rtrn=")) {
 					hisname=mes.replaceAll("rtrn=", "");
-					if (chat.frdlist.containsKey(hisuid)) {
-						rename(hisuid, hisip, hisname);
+					if (chat.frdlist.containsKey(hisuidString)) {
+						rename(hisuidString, hisip, hisname);
 					}else {
-						online(hisuid,hisip, hisname, "find");
+						online(hisuidString,hisip, hisname, "find");
 					}
 				}else if (mes.startsWith("renm=")) {
 					hisname=mes.replaceAll("renm=", "");
-					if (!chat.frdlist.containsKey(hisip)) {
-						online(hisuid,hisip, hisname, "find");
+					if (!chat.frdlist.containsKey(hisuidString)) {
+						online(hisuidString,hisip, hisname, "find");
 						returnmes(hisip);
 					}else {
-						rename(hisuid,hisip, hisname);
+						rename(hisuidString,hisip, hisname);
 					}
 				}else if (mes.startsWith("offl=")) {
-					hisip=chat.frdlist.get(hisuid);
+					
+					hisip=chat.frdlist.get(hisuidString);
 					hisname=chat.frdname.get(hisip);
-					frdshow=hisname+"---"+hisip.toString().split("/")[1];
+					frdshow=hisname+"---"+hisip.getHostAddress();
 					chat.friendlsit.remove(frdshow);
-					chat.frdlist.remove(hisuid);
+					chat.frdlist.remove(hisuidString);
 					chat.frdname.remove(hisip);
 					chat.zhuangtailan.setText(frdshow+"下线了");
 				}
@@ -106,10 +123,10 @@ public class ListenSysMes extends Thread {
 		}
 	}
 	
-	public void online(byte[] hisuid,InetAddress hisip,String hisname,String type){
-		chat.frdlist.put(hisuid, hisip);
+	public void online(String hisuidString,InetAddress hisip,String hisname,String type){
+		chat.frdlist.put(hisuidString, hisip);
 		chat.frdname.put(hisip, hisname);
-		String frdshow=hisname+"---"+hisip.toString().split("/")[1];
+		String frdshow=hisname+"---"+hisip.getHostAddress();
 		chat.friendlsit.add(frdshow);
 		switch (type) {
 		case "find":
@@ -144,21 +161,22 @@ public class ListenSysMes extends Thread {
 		}
 	}
 	
-	public void rename(byte[] hisuid,InetAddress hisip,String hisname){
-		InetAddress hisodip=chat.frdlist.get(hisuid);
+	public void rename(String hisuidString,InetAddress hisip,String hisname){
+		InetAddress hisodip=chat.frdlist.get(hisuidString);
 		String hisodnm=chat.frdname.get(hisodip);
 		chat.frdname.put(hisip, hisname);
-		chat.frdlist.put(hisuid, hisip);
-		String olditem=hisodnm+"---"+hisodip.toString().split("/")[1];
+		chat.frdlist.put(hisuidString, hisip);
+		String olditem=hisodnm+"---"+hisodip.getHostAddress();
+		if (chat.private_chat_map.containsKey(hisip)) {
+			chat.private_chat_map.get(hisip).w.setTitle(hisname+" --- "+hisip.getHostAddress()+"私聊 - CareChat");
+		}
 		for (int i = 0; i < chat.friendlsit.getItemCount(); i++) {
-			if (chat.friendlsit.getItem(i) == olditem) {
-				chat.friendlsit.replaceItem(hisname+"---"+hisip.toString().split("/")[1], i);
+			if (chat.friendlsit.getItem(i).equals(olditem)) {
+				chat.friendlsit.replaceItem(hisname+"---"+hisip.getHostAddress(), i);
 				return;
 			}
 		}
-		chat.friendlsit.add(hisname+"---"+hisip.toString().split("/")[1]);
+		chat.friendlsit.add(hisname+"---"+hisip.getHostAddress());
 	}
-	
-	
 }
 

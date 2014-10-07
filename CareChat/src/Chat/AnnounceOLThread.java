@@ -5,9 +5,17 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.net.NetworkInterface;
 import java.net.UnknownHostException;
 
 public class AnnounceOLThread extends Thread {
+	MulticastSocket sender = null;
+	boolean runable=true;
+	NetworkInterface netIf=null;
+	String anc_mes="find=";
+	public AnnounceOLThread(NetworkInterface netIf) {
+		this.netIf=netIf;
+	}
 	@Override
 	public void run() {
 		// TODO Auto-generated method stub
@@ -19,8 +27,9 @@ public class AnnounceOLThread extends Thread {
 			// TODO Auto-generated catch block
 			chat.catchexception(e1);
 		}
-		while (true) {
+		while (runable) {
 			try {
+				chat.zhuangtailan.setText("xuangao“ª¥Œ¿≤¿≤¿≤¿≤¿≤hiiiuuhfiu678678f");
 				byte[] findmesString=("find="+chat.username).getBytes();
 				byte[] findmes=new byte[findmesString.length+12];
 				System.arraycopy(uid, 0, findmes, 0, 8);
@@ -28,8 +37,9 @@ public class AnnounceOLThread extends Thread {
 				System.arraycopy(findmesString, 0, findmes, 12, findmesString.length);
 				DatagramPacket pack=new DatagramPacket(findmes, findmes.length, muticast, chat.muticastport);
 				
-				
 				MulticastSocket sender = new MulticastSocket();
+				sender.setNetworkInterface(netIf);
+				sender.setTimeToLive(255);
 				
 				sender.send(pack);
 

@@ -2,11 +2,14 @@ package Chat;
 
 import java.awt.AWTException;
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Image;
 import java.awt.List;
 import java.awt.MenuItem;
+import java.awt.Point;
 import java.awt.PopupMenu;
 import java.awt.SystemTray;
 import java.awt.Toolkit;
@@ -15,10 +18,13 @@ import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.BufferedReader;
@@ -33,6 +39,7 @@ import java.io.PrintStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
@@ -43,6 +50,7 @@ import java.util.HashMap;
 import java.util.Random;
 import java.util.Vector;
 
+import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -53,9 +61,11 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
 import javax.swing.JWindow;
 import javax.swing.UIManager;
+import javax.swing.border.LineBorder;
 
 public class chat {
 
@@ -64,13 +74,15 @@ public class chat {
 	 */
 //	TODO 声明全局
 	public	static JFrame w=new JFrame();
-	public	static JTextArea mesbox=new JTextArea(2,2);
+	public	static JTextArea mesbox=new JTextArea(3,2);
 	public	static JTextArea his=new JTextArea();
 	public	static String username="新用户";
-	public	static List friendlsit=new List(10, true);  
-	public	static JLabel zhuangtailan=new JLabel(" ");
-	public	static HashMap<byte[], InetAddress> frdlist=new HashMap<>();
+	public	static List friendlsit=new List(10, false);
+	public	static JLabel zhuangtailan=new TypeJlabel();
+	public	static HashMap<String, InetAddress> frdlist=new HashMap<>();
 	public	static HashMap<InetAddress, String> frdname=new HashMap<>();
+	public static HashMap<InetAddress, PrivateChat> private_chat_map=new HashMap<>();
+	public static volatile HashMap<String, Long> frd_online_time=new HashMap<>();
 	public	static int LocalX=Toolkit.getDefaultToolkit().getScreenSize().width/2-225;
 	public	static int LocalY=Toolkit.getDefaultToolkit().getScreenSize().height/2-250;
 	public	static int Width=450;
@@ -84,66 +96,179 @@ public class chat {
 	public	static JButton changetointernet=new JButton("公网聊天");
 	public	static final Font uifont=new Font("微软雅黑",Font.PLAIN,13);
 	public	static String muticast="235.0.0.1";
-	public	static int muticastport=40100;
+	public	static int muticastport=45450;
+	public static int group_chat_port=45451;
+	public static int private_chat_port=45452;
 	public	static String localIP="";
 	public	static byte[] localIPbytes=new byte[4];
 	public	static ListenSysMes lstnsysmes=new ListenSysMes();
+	public static AnnounceOLThread an_ol_Thread=null;
 	public	static Vector<String> nets=getNetwork();
 	public	static int nets_use_item=0;
 	public	static String read_netinterface="";
 	public	static boolean nic_is_same=false;
 	public static TrayIcon trayIcon=null;
 	public static PopupMenu tray_popupMenu;
-	public static byte[] uid= getuid();
+	public static byte[] uid= null;
+	public static String uidString=null;
+	public static double divider=0.75;
+	public static JLabel titile=new JLabel(w.getTitle());
+	public static Color backgroundColor=new Color(0,40,90,200);
+	public static Color nullColor=new Color(0,0,0,0);
+	public static Color panelColor=new Color(2,70,143,150);
+	public static Color ui_textColor=new Color(0,140,255);
+	static Point origin = new Point();
 //	TODO 全局结束
 	
+	/**
+	 * 以下需要一个大JPanel把下面所有的JPanel全装里面，
+	 * 然后这个大JPanel周围四个填充为空、边框颜色为backgroundcolor、边框宽度为1的JPanel，
+	 * 这四个JPanel加上鼠标事件，用来调整窗口大小
+	 * 
+	 * 局域网聊天跟互联网聊天界面切换是一个类似3D的翻面过程
+	 * 
+	 * 配置文件读写尚未完成
+	 * 
+	 * 多网卡支持尚不完善
+	 * 
+	 * 系统设置还需要添加颜色设置，并可以实时预览
+	 */
 
 	
 	public static void formload(JWindow load){
+		try {
+			username=InetAddress.getLocalHost().getHostName();
+		} catch (UnknownHostException e3) {
+			catchexception(e3);
+		}
 		w.setSize(Width, Height);
 		w.setLocation(LocalX, LocalY);
 		
 		
 //		TODO 设置总样式、布局
-		w.setLayout(new BorderLayout());
-		
+		w.setLayout(new BorderLayout(0,10));
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 		} catch (Exception e2) {
 			catchexception(e2);
-		} 
-		//总样式、布局  结束
+		}
+		w.setUndecorated(true);
+		w.setBackground(backgroundColor);
 		
+		JPanel headJPanel=new JPanel(new BorderLayout());
+		JPanel w_main=new JPanel(new BorderLayout());
 		JPanel send=new JPanel(new BorderLayout());
 		JPanel sendlan=new JPanel(new BorderLayout());
+		headJPanel.setBackground(nullColor);
+		w_main.setBackground(nullColor);
+		send.setBackground(nullColor);
+		sendlan.setBackground(nullColor);
+		
+		//总样式、布局  结束
+		
+//		头部开始
+		titile.setFont(new Font("微软雅黑", Font.BOLD, 17));
+		titile.setText("  ");
+		titile.setForeground(ui_textColor);
+		JPanel buttJPanel=new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+		buttJPanel.setBackground(nullColor);
+		try {
+			JLabel settingJLabel=new JLabel(new ImageIcon(chat.class.getResource("/images/setting.png")));
+			JLabel min=new JLabel(new ImageIcon(chat.class.getResource("/images/min.png")));
+			JLabel max=new JLabel(new ImageIcon(chat.class.getResource("/images/max.png")));
+			JLabel close=new JLabel(new ImageIcon(chat.class.getResource("/images/close.png")));
+			buttJPanel.add(settingJLabel);
+			buttJPanel.add(min);
+			buttJPanel.add(max);
+			buttJPanel.add(close);
+			close.addMouseListener(new MouseListener() {
+				
+				@Override
+				public void mouseReleased(MouseEvent e) {
+					
+				}
+				
+				@Override
+				public void mousePressed(MouseEvent e) {
+					
+				}
+				
+				@Override
+				public void mouseExited(MouseEvent e) {
+					close.setBackground(null);
+					close.setBackground(null);
+				}
+				
+				@Override
+				public void mouseEntered(MouseEvent e) {
+					close.setOpaque(true);
+					close.setBackground(new Color(255, 0, 0));
+				}
+				
+				@Override
+				public void mouseClicked(MouseEvent e) {
+					System.out.println("点了");
+				}
+			});
+		} catch (Exception e) {
+			JOptionPane.showMessageDialog(null, "资源文件被破坏，请重新下载或拷贝本程序！");
+			System.exit(0);
+		}
+		headJPanel.add(titile,"West");
+		headJPanel.add(buttJPanel,"East");
+		headJPanel.setBorder(new LineBorder(nullColor, 10));
+//		头部结束
 		
 //		发送消息部分按钮、消息框样式
 		JButton sendtext=new JButton("发送 (Enter)");
 		sendtext.setFont(uifont);
+		sendtext.setBackground(nullColor);
+		sendtext.setForeground(ui_textColor);
+		sendtext.setBorder(BorderFactory.createLineBorder(ui_textColor, 1));
+		
 		mesbox.setFont(uifont);
 		mesbox.setLineWrap(true);
 		mesbox.setWrapStyleWord(true);
+		mesbox.setBackground(panelColor);
+		mesbox.setForeground(ui_textColor);
+		mesbox.setBorder(BorderFactory.createLineBorder(ui_textColor, 1));
 //		结束
 		                                                               
 
 		JPanel frlist=new JPanel(new BorderLayout());
+		frlist.setBackground(nullColor);
 		JLabel frlist_tips=new JLabel("好友列表");
+		frlist_tips.setForeground(ui_textColor);
 		frlist_tips.setFont(uifont);
 		frlist.setFont(uifont);
+		friendlsit.setBackground(panelColor);
+		friendlsit.setForeground(ui_textColor);
+		frlist.setBorder(new LineBorder(ui_textColor, 1));
 		
 		JScrollPane his_area=new JScrollPane(his);
+		his_area.setBackground(nullColor);
 		his_area.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 		his_area.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED); 
 		his.setEditable(false);
 		his.setFont(uifont);
 		his.setLineWrap(true);
 		his.setWrapStyleWord(true);
+		his.setBackground(panelColor);
+		his.setForeground(ui_textColor);
+		his.setBorder(new LineBorder(ui_textColor, 1));
+		
+		JScrollPane send_area=new JScrollPane(mesbox);
+		send_area.setBackground(nullColor);
+		send_area.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+		send_area.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED); 
 		sendtext.setPreferredSize(new Dimension(123, 20));
 		
+		zhuangtailan.setForeground(ui_textColor);
+		zhuangtailan.setText("  ");
 		zhuangtailan.setFont(uifont);
 		
 		
-		send.add(mesbox,"Center");
+		send.add(send_area,"Center");
 		send.add(sendtext,"East");
 		
 		
@@ -153,10 +278,21 @@ public class chat {
 		frlist.add(frlist_tips,"North");
 		frlist.add(friendlsit,"Center");
 		
-		w.add(his_area,"Center");
-		w.add(sendlan,"South");
-		w.add(frlist,"East");
+		JSplitPane topJSplitPane=new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, true, his_area, frlist);
+		topJSplitPane.setDividerSize(1);
+		topJSplitPane.setBackground(nullColor);
+		topJSplitPane.setBorder(new LineBorder(ui_textColor, 1));
+		w_main.add(topJSplitPane,"Center");
+		w_main.add(sendlan,"South");
 		
+		w.add(headJPanel, "North");
+		w.add(w_main,"Center");
+		
+//		设置视觉开始
+		
+		
+		
+//		设置视觉结束
 		
 		updatetitile();
 		load.setVisible(false);
@@ -164,28 +300,69 @@ public class chat {
 		load.dispose();
 		load=null;
 		
-//		设置颜色
-//		mesbox.setBackground(new Color(76, 194, 255));
-//		his.setBackground(new Color(46, 184, 255));
-//		LineBorder border=new LineBorder(Color.BLUE, 3, true);
-//		mesbox.setBorder(border);
-//		his.setBorder(border);
-//		mesbox.addFocusListener(new FocusListener() {
-//			
-//			@Override
-//			public void focusLost(FocusEvent e) {
-//				mesbox.setBorder(border);
-//			}
-//			
-//			@Override
-//			public void focusGained(FocusEvent e) {
-//				mesbox.setBorder(new LineBorder(Color.CYAN, 2,true));
-//			}
-//		});
+		topJSplitPane.setDividerLocation(0.75);
+		w.setVisible(false);
+		w.setVisible(true);
 		
-//		设置颜色结束
 		
-//		右键菜单开始
+		topJSplitPane.addMouseListener(new MouseListener() {
+			
+			@Override
+			public void mouseReleased(MouseEvent e) {
+				if (e.getX()==topJSplitPane.getDividerLocation()) {
+				}
+			}
+			
+			@Override
+			public void mousePressed(MouseEvent e) {}
+			
+			@Override
+			public void mouseExited(MouseEvent e) {
+				divider=(double)topJSplitPane.getDividerLocation()/(double)topJSplitPane.getWidth();
+			}
+			
+			@Override
+			public void mouseEntered(MouseEvent e) {}
+			
+			@Override
+			public void mouseClicked(MouseEvent e) {}
+		});
+		
+//		TODO 鼠标事件，改变窗口位置与大小
+		headJPanel.addMouseListener(new MouseListener() {
+			
+			@Override
+			public void mouseReleased(MouseEvent e) {}
+			
+			@Override
+			public void mousePressed(MouseEvent e) {
+				origin.x = e.getX();
+				origin.y = e.getY();
+			}
+			
+			@Override
+			public void mouseExited(MouseEvent e) {}
+			
+			@Override
+			public void mouseEntered(MouseEvent e) {}
+			
+			@Override
+			public void mouseClicked(MouseEvent e) {}
+		});
+		headJPanel.addMouseMotionListener(new MouseMotionListener() {
+			
+			@Override
+			public void mouseMoved(MouseEvent e) {}
+			
+			@Override
+			public void mouseDragged(MouseEvent e) {
+				Point p = w.getLocation();
+				w.setLocation(p.x + e.getX() - origin.x, p.y + e.getY()- origin.y);
+			}
+		});
+		
+		
+//		TODO 右键菜单
 		JPopupMenu menu_his=new JPopupMenu();
 		JMenuItem copyItem_his=new JMenuItem("复制");
 		JMenuItem hideItem_his=new JMenuItem("隐藏界面");
@@ -345,6 +522,99 @@ public class chat {
 			@Override
 			public void mouseClicked(MouseEvent e) {}
 		});
+		
+		JPopupMenu menu_frdlist=new JPopupMenu();
+		JMenuItem private_chatItem_frdlist=new JMenuItem("发起私聊");
+		JMenuItem hideItem_frdlist=new JMenuItem("隐藏界面");
+		JMenuItem changetointernetItem_frdlist=new JMenuItem("公网聊天");
+		JMenuItem configItem_frdlist=new JMenuItem("系统设置");
+		
+		private_chatItem_frdlist.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					String[] ip_temp=friendlsit.getSelectedItem().split("---");
+					InetAddress hisip=InetAddress.getByName(ip_temp[ip_temp.length-1]);
+					if (private_chat_map.containsKey(hisip)) {
+						private_chat_map.get(hisip).w.setVisible(true);
+					}else {
+						new PrivateChat(hisip);
+					}
+				} catch (UnknownHostException e1) {
+					catchexception(e1);
+				}
+			}
+		});
+		hideItem_frdlist.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				w.setVisible(false);
+			}
+		});
+		changetointernetItem_frdlist.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JOptionPane.showMessageDialog(null, "还没写完");
+			}
+		});
+		configItem_frdlist.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				config.showon();
+			}
+		});
+		
+		menu_frdlist.add(private_chatItem_frdlist);
+		menu_frdlist.add(hideItem_frdlist);
+		menu_frdlist.add(changetointernetItem_frdlist);
+		menu_frdlist.add(configItem_frdlist);
+		
+		friendlsit.addMouseListener(new MouseListener() {
+			
+			@Override
+			public void mouseReleased(MouseEvent e) {}
+			
+			@Override
+			public void mousePressed(MouseEvent e) {
+				if (e.getButton() == 3) {
+					if (friendlsit.getSelectedIndex() == -1) {
+						private_chatItem_frdlist.setEnabled(false);
+					}else {
+						private_chatItem_frdlist.setEnabled(true);
+					}
+					menu_frdlist.show(friendlsit, e.getX(), e.getY());
+				}
+			}
+			
+			@Override
+			public void mouseExited(MouseEvent e) {}
+			
+			@Override
+			public void mouseEntered(MouseEvent e) {}
+			
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if (e.getClickCount() == 2) {
+					if (friendlsit.getSelectedIndex() != -1){
+						try {
+							String[] ip_temp=friendlsit.getSelectedItem().split("---");
+							InetAddress hisip=InetAddress.getByName(ip_temp[ip_temp.length-1]);
+							if (private_chat_map.containsKey(hisip)) {
+								private_chat_map.get(hisip).w.setVisible(true);
+							}else {
+								new PrivateChat(hisip);
+							}
+						} catch (UnknownHostException e1) {
+							catchexception(e1);
+						}
+					}
+				}
+			}
+		});
 //		右键菜单结束
 		
 		
@@ -394,6 +664,22 @@ public class chat {
 			@Override
 			public void windowActivated(WindowEvent e) {}
 		});
+		w.addComponentListener(new ComponentListener() {
+			
+			@Override
+			public void componentShown(ComponentEvent e) {}
+			
+			@Override
+			public void componentResized(ComponentEvent e) {
+				topJSplitPane.setDividerLocation(divider);
+			}
+			
+			@Override
+			public void componentMoved(ComponentEvent e) {}
+			
+			@Override
+			public void componentHidden(ComponentEvent e) {}
+		});
 //		窗口事件结束
 		
 		
@@ -439,6 +725,7 @@ public class chat {
 		
 //		切换到互联网聊天按钮事件结束
 		
+		
 	}
 	
 	
@@ -448,7 +735,7 @@ public class chat {
 				zhuangtailan.setText("发送的消息不能为空");
 				return;
 			}
-			new Thread(new SendThread(mes)).start();
+			new SendThread(mes).start();
 			showmes(mesbox.getText(), username);
 			mesbox.setText("");
 			zhuangtailan.setText("已发送");
@@ -490,8 +777,8 @@ public class chat {
 			DatagramSocket sender=new DatagramSocket();
 			sender.send(pack);
 			sender.close();
-			updatetitile();
 			username=name;
+			updatetitile();
 		} catch ( IOException e) {
 			catchexception(e);
 		}
@@ -518,10 +805,24 @@ public class chat {
 	    return networks;
 	}
 	
-	public static byte[] getuid(){
-		byte[] uid=new byte[8];
-		(new Random()).nextBytes(uid);
-		return uid;
+	public static void getuid(){
+		byte[] uid_temp=new byte[8];
+		(new Random()).nextBytes(uid_temp);
+		StringBuilder sb=new StringBuilder(32);
+		for (byte b : uid_temp) {
+			String b_temp=String.valueOf(b);
+			if (b_temp.contains("-")) {
+				b_temp=b_temp.replaceAll("-", "");
+				sb.append("-");
+			}
+			for (int i = 3-b_temp.length(); i > 0; i--) {
+				sb.append(0);
+			}
+			sb.append(b_temp);
+		}
+		uid=uid_temp;
+		uidString=sb.toString();
+		System.out.println("自己"+uidString);
 	}
 	
 	
@@ -530,11 +831,15 @@ public class chat {
 		String nowip;
 		try {
 			if ((nowiInterface=(NetworkInterface.getByName(interfacename)))!=null && nowiInterface.isUp()&& nowiInterface.getInterfaceAddresses().size() != 0 && !(nowip=nowiInterface.getInterfaceAddresses().get(0).toString().split("/")[1]).startsWith("169") && !nowip.contains(":")) {
-				while (lstnsysmes.isAlive()) {
-					lstnsysmes.broadSocket.close();
-				}
+//				while (lstnsysmes.isAlive()) {
+//					lstnsysmes.broadSocket.close();
+//				}
 				lstnsysmes=new ListenSysMes();
-				lstnsysmes.broadSocket.setNetworkInterface(nowiInterface);
+//				lstnsysmes.broadSocket.setNetworkInterface(nowiInterface);
+				if (an_ol_Thread != null && an_ol_Thread.isAlive()) {
+					an_ol_Thread.runable=false;
+				}
+				an_ol_Thread=new AnnounceOLThread(nowiInterface);
 				localIP=nowip;
 				localIPbytes=InetAddress.getByName(nowip).getAddress();
 				return true;
@@ -546,7 +851,13 @@ public class chat {
 	}
 	
 	public static void updatetitile(){
-		w.setTitle(username+" - 本机IP："+localIP+" - CareChat");
+		String ti=username+" - "+localIP+" - CareChat";
+		w.setTitle(ti);
+		titile.setText(ti);
+		titile.setToolTipText(ti);
+		if (trayIcon != null) {
+			trayIcon.setToolTip(ti);
+		}
 	}
 	
 	public static void showTray(){
@@ -639,11 +950,14 @@ public class chat {
 	public static void exit(){
 		try {
 			byte[] offlnmesString=("offl=").getBytes();
-			byte[] offlnmes=new byte[offlnmesString.length+4];
-			System.arraycopy(localIPbytes, 0, offlnmes, 0, 4);
-			System.arraycopy(offlnmesString, 0, offlnmes, 4, offlnmesString.length);
-			DatagramPacket pack=new DatagramPacket(offlnmes, offlnmes.length, InetAddress.getByName(muticast), chat.muticastport);
-			DatagramSocket sender=new DatagramSocket();
+			byte[] offlnmes=new byte[offlnmesString.length+12];
+			System.arraycopy(uid, 0, offlnmes, 0, 8);
+			System.arraycopy(localIPbytes, 0, offlnmes, 8, 4);
+			System.arraycopy(offlnmesString, 0, offlnmes, 12, offlnmesString.length);
+			DatagramPacket pack=new DatagramPacket(offlnmes, offlnmes.length, InetAddress.getByName(muticast), muticastport);
+			MulticastSocket sender=new MulticastSocket();
+			sender.setNetworkInterface(NetworkInterface.getByName(nets.get(nets_use_item).split("\\| ")[1]));
+			sender.setTimeToLive(255);
 			sender.send(pack);
 			sender.close();
 		} catch (IOException e) {
@@ -773,6 +1087,7 @@ public class chat {
 	public static void mainly(JWindow load) {
 		// TODO main
 		readconfig();
+		getuid();
 		if (checkip(read_netinterface)) {
 			for (int i = 0; i < nets.size(); i++) {
 				if (nets.get(i).endsWith(read_netinterface)) {
@@ -788,14 +1103,15 @@ public class chat {
 			}
 			
 		}
-		
 		formload(load);
 		if (SystemTray.isSupported()) {
 			showTray();
 		}
 		lstnsysmes.start();
-		new Thread(new receiveThread()).start();
-		new Thread(new AnnounceOLThread()).start();
+		an_ol_Thread.start();
+		new receiveThread().start();
+		new Private_Chat_Receive().start();
+		new CutFriendList().start();
 	}
 
 }

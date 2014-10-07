@@ -30,7 +30,7 @@ import javax.swing.border.TitledBorder;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 
-public class config extends JDialog {
+public class config extends JDialog implements Runnable{
 
 	private static final long serialVersionUID = 1L;
 	public static config thiswindow;
@@ -48,6 +48,7 @@ public class config extends JDialog {
 	private String new_inter_name=InternetChat.username;
 	private String new_serverip=chat.serverip;
 	private int new_serverport=chat.serverport;
+	private JButton cancel=new JButton("取消");
 
 	private config(){
 		System.out.println(new_netcard_id);
@@ -205,7 +206,6 @@ public class config extends JDialog {
 		
 //		确认&取消按钮开始
 		JPanel saveconfigJPanel=new JPanel(new FlowLayout(FlowLayout.CENTER, 100, 10));
-		JButton cancel=new JButton("取消");
 		yes.setFont(uifont);
 		cancel.setFont(uifont);
 		saveconfigJPanel.add(yes);
@@ -339,12 +339,16 @@ public class config extends JDialog {
 			}
 		});
 		
+		config this_temp=this;
+		
 		yes.addActionListener(new ActionListener() {
-			
+//			TODO 保存设置按钮
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				yes.setEnabled(false);
-				savesonfig();
+				cancel.setEnabled(false);
+				yes.setText("保存中");
+				new Thread(this_temp).start();
 			}
 		});
 		
@@ -386,6 +390,7 @@ public class config extends JDialog {
 		
 	}
 	
+	
 	private String getip(String netcard,JLabel show){
 		NetworkInterface nowiInterface;
 		String nowip;
@@ -413,13 +418,29 @@ public class config extends JDialog {
 		}
 	}
 	
-	private void savesonfig() {
-//		TODO 保存配置
+	
+	public static void showon(){
+//		TODO 显示窗口
+		if (thiswindow != null) {
+			thiswindow.setVisible(false);
+			thiswindow.setLocationRelativeTo(chat.w);
+			thiswindow.setVisible(true);
+		}else {
+			thiswindow=new config();
+		}
+	}
+
+	@Override
+	public void run() {
+		// TODO 保存配置
 		if (chat.checkip(new_netcard_name)) {
 			chat.nets_use_item=new_netcard_id;
 			chat.lstnsysmes.start();
+			chat.an_ol_Thread.start();
 		}else {
 			JOptionPane.showMessageDialog(thiswindow, "设置保存失败，您选择的网卡"+chat.nets.get(new_netcard_id)+"没有有效的IP配置");
+			yes.setEnabled(false);
+			cancel.setEnabled(true);
 			return;
 		}
 		chat.AskOnClose=new_ask_on_close;
@@ -431,17 +452,7 @@ public class config extends JDialog {
 		}
 		thiswindow.dispose();
 		thiswindow=null;
-	}
-	
-	public static void showon(){
-//		TODO 显示窗口
-		if (thiswindow != null) {
-			thiswindow.setVisible(false);
-			thiswindow.setLocationRelativeTo(chat.w);
-			thiswindow.setVisible(true);
-		}else {
-			thiswindow=new config();
-		}
+		
 	}
 	
 }

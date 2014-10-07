@@ -12,7 +12,7 @@ public class receiveThread extends Thread {
 		// TODO Auto-generated method stub
 		DatagramSocket ds = null;
 		try {
-			ds = new DatagramSocket(45001);
+			ds = new DatagramSocket(chat.group_chat_port);
 		} catch (Exception e) {
 			// TODO: handle exception
 			if (chat.trayIcon != null) {
